@@ -7,7 +7,7 @@ import { RxGithubLogo } from "react-icons/rx";
 import Typography from "@/components/ui/typography";
 import { Form } from "@/components/ui/form";
 import { useForm } from "react-hook-form";
-import { z } from "zod";
+import { set, z } from "zod";
 import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -19,9 +19,14 @@ import {
 import { Input } from "@/components/ui/input";
 import Link from "next/link";
 import { MdOutlineAutoAwesome } from "react-icons/md";
+import { Provider } from "@supabase/supabase-js";
+import { createBrowserClient } from '@supabase/ssr'
+import { registerWithEmail } from "@/actions/registerwitheamil";
 
-
-
+const supabaseBrowserClient = createBrowserClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+)
 
 export default function AuthPage() {
 
@@ -44,10 +49,37 @@ export default function AuthPage() {
   });
 
 
-  const onSubmit = async (data: z.infer<typeof formSchema>) => {
-    console.log(data);
-   
+  const onSubmit = async (val: z.infer<typeof formSchema>) => {
+    console.log(val);
+    setIsAuthenticating(true)
+   const res = await registerWithEmail({email: val.email})
+   const {data, error} = JSON.parse(res)
+   if(error) {
+    console.warn('Sign in error',error)
+   }
+   if(data) {
+    console.log('Sign in success',data)
+   }
+    setIsAuthenticating(false)
+
   };
+
+ async function socialAuth(provider: Provider) {
+  setIsAuthenticating(true);
+  try {
+    await supabaseBrowserClient.auth.signInWithOAuth({
+      provider,
+      options: {
+        skipBrowserRedirect: false,
+        redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`
+      }
+    })
+  } catch (error) {
+    console.error(error);
+  } finally {
+    setIsAuthenticating(false)
+  }
+}
 
   return (
     <div className="min-h-screen p-5 grid text-center place-content-center bg-white">
@@ -69,7 +101,12 @@ export default function AuthPage() {
         />
 
         <div className="flex flex-col space-y-4">
-          <Button disabled={isAuthenticating} variant="outline" className="py-6 border-2 flex space-x-3">
+          <Button disabled={isAuthenticating} 
+            variant="outline" 
+            className="py-6 border-2 flex space-x-3" 
+            onClick={()=>socialAuth('google')}
+          >
+
             <FcGoogle size={30} />
             <Typography
               className="text-xl"
@@ -77,7 +114,11 @@ export default function AuthPage() {
               variant="p"
             />
           </Button>
-          <Button disabled={isAuthenticating} variant="outline" className="py-6 border-2 flex space-x-3">
+          <Button disabled={isAuthenticating} 
+          variant="outline"
+           className="py-6 border-2 flex space-x-3" 
+          onClick={()=>socialAuth('github')}
+          >
             <RxGithubLogo size={30} />
             <Typography
               className="text-xl"
