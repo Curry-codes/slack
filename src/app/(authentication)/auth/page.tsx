@@ -7,8 +7,9 @@ import { RxGithubLogo } from "react-icons/rx";
 import Typography from "@/components/ui/typography";
 import { Form } from "@/components/ui/form";
 import { useForm } from "react-hook-form";
-import { set, z } from "zod";
-import { useState } from "react";
+import { date, set, z } from "zod";
+import { useEffect, useState } from "react";
+
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   FormField,
@@ -22,6 +23,7 @@ import { MdOutlineAutoAwesome } from "react-icons/md";
 import { Provider } from "@supabase/supabase-js";
 import { createBrowserClient } from '@supabase/ssr'
 import { registerWithEmail } from "@/actions/registerwitheamil";
+import { useRouter } from "next/navigation";
 
 const supabaseBrowserClient = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -31,7 +33,26 @@ const supabaseBrowserClient = createBrowserClient(
 export default function AuthPage() {
 
 
-    const [isAuthenticating, setIsAuthenticating] = useState(false);
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+  
+  const router = useRouter(); 
+  
+  useEffect(() => {
+    const getCurrentUser = async () => {
+      const { data: { session } } = await supabaseBrowserClient.auth.getSession();
+      
+      console.log(session);
+      if (session) {
+        router.push('/'); 
+        return null
+      }
+    };
+  
+    getCurrentUser();
+  }, [router]); 
+  
+
   const formSchema = z.object({
     email: z
       .string()
@@ -80,6 +101,8 @@ export default function AuthPage() {
     setIsAuthenticating(false)
   }
 }
+
+if(isMounted) return null;
 
   return (
     <div className="min-h-screen p-5 grid text-center place-content-center bg-white">
